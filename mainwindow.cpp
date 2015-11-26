@@ -14,11 +14,17 @@ MainWindow::MainWindow(QWidget *parent) :
     pilot = new mongo::BSONObj();
 
     QStringList qstrl;
-    qstrl.append(tr("Mongos"));
-    qstrl.append(tr("Реплика 1"));
-    qstrl.append(tr("Реплика 2"));
+    qstrl.append("Mongos");
+    qstrl.append("ReplSet 1");
+    qstrl.append("ReplSet 2");
     ui->comboBox_2->addItems(qstrl);
 
+    qstrl.clear();
+    qstrl.append("4242");
+    qstrl.append("4241");
+    qstrl.append("SUAI");
+    qstrl.append("kaf44");
+    ui->comboBox->addItems(qstrl);
 
     ui->tableWidget->setColumnHidden(0, true);
     ui->tableWidget->setColumnWidth(1,100);
@@ -28,15 +34,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->tableWidget->setShowGrid(true);
 
+    ui->tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
 
 
+    connection = new mongo::DBClientConnection();
     mongo::client::initialize();
-        try {
-            run();
-        } catch( const mongo::DBException &e ) {
-            QString error = (tr("При попытке установить соединение возникли ошибки:\n"));
-            error.append(e.what());
-        }
 
 
 }
@@ -46,14 +49,12 @@ MainWindow::~MainWindow()
     delete lbl;
     delete msb;
     delete pilot;
+    delete connection;
     delete ui;
 }
 
 
-void MainWindow ::run() {
-  mongo::DBClientConnection c;
-  c.connect("localhost");
-}
+
 
 void MainWindow::on_tableWidget_cellClicked(int row, int column)
 {
@@ -65,5 +66,79 @@ void MainWindow::on_tableWidget_cellClicked(int row, int column)
 
 void MainWindow::on_commandLinkButton_clicked()
 {
+    if (connect())
+    {
+        mongo::Query query = MONGO_QUERY("squadron" << 111);
+        std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query);
 
+    }
+}
+
+bool MainWindow::connect()
+{
+    if (connection != 0)
+        delete connection;
+
+    QString outputText;
+
+    std::vector<mongo::HostAndPort> rs0, rs1;
+    rs0.push_back(mongo::HostAndPort("localhost", 10001));
+    rs0.push_back(mongo::HostAndPort("localhost", 10002));
+    rs0.push_back(mongo::HostAndPort("localhost", 10003));
+    rs1.push_back(mongo::HostAndPort("localhost", 10004));
+    rs1.push_back(mongo::HostAndPort("localhost", 10005));
+
+
+    mongo::DBClientReplicaSet *connection2;
+    mongo::DBClientConnection *connection1;
+
+    if (ui->comboBox_2->currentText() == "Mongos")
+    {
+        try {
+            connection1 = new mongo::DBClientConnection();
+            connection1->connect("localhost:10007");
+            outputText += "connected ok";
+            ui->stats->setText(outputText);
+        } catch ( const mongo::DBException &e ) {
+            outputText += "caught ";
+            outputText += e.what();
+            ui->stats->setText(outputText);
+            return false;
+        }
+
+        connection = connection1;
+    }
+
+    if (ui->comboBox_2->currentText() == "ReplSet 1")
+    {
+        try {
+        connection2 = new mongo::DBClientReplicaSet("rs0", rs0);
+        outputText += "connected ok";
+        ui->stats->setText(outputText);
+        } catch( const mongo::DBException &e ) {
+            outputText += "caught ";
+            outputText += e.what();
+            ui->stats->setText(outputText);
+            return false;
+        }
+        connection = connection2;
+    }
+
+    if (ui->comboBox_2->currentText() == "ReplSet 2")
+    {
+        try {
+        connection2 = new mongo::DBClientReplicaSet("rs1", rs1);
+        outputText += "connected ok";
+        ui->stats->setText(outputText);
+        } catch( const mongo::DBException &e ) {
+            outputText += "caught ";
+            outputText += e.what();
+            ui->stats->setText(outputText);
+            return false;
+        }
+        connection = connection2;
+    }
+
+    outputText += "\n\n";
+    return true;
 }

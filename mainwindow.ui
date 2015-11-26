@@ -33,11 +33,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineEdit">
-          <property name="maximumSize">
+         <widget class="QComboBox" name="comboBox">
+          <property name="minimumSize">
            <size>
-            <width>150</width>
-            <height>16777215</height>
+            <width>70</width>
+            <height>0</height>
            </size>
           </property>
          </widget>
@@ -177,6 +177,13 @@
        </spacer>
       </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QLabel" name="stats">
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

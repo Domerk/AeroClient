@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <mongo/client/dbclient.h>
 #include <mongo/bson/bson.h>
+#include <mongo/client/dbclientcursor.h>
 
 namespace Ui {
 class MainWindow;
@@ -29,10 +30,11 @@ private:
     Ui::MainWindow *ui;
     QLabel* lbl;
     QMessageBox* msb;
+    mongo::DBClientBase* connection;
 
     mongo::BSONObj* pilot;
 
-    void run();
+    bool connect();
 };
 
 #endif // MAINWINDOW_H
