@@ -30,13 +30,17 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tableWidget->setColumnWidth(1,100);
     ui->tableWidget->setColumnWidth(2,200);
     ui->tableWidget->setColumnWidth(3,200);
-    ui->tableWidget->setColumnWidth(4,150);
+    ui->tableWidget->setColumnWidth(4,120);
 
     ui->tableWidget->setShowGrid(true);
 
     ui->tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
 
+    ui->tableWidget->setMinimumWidth(660);
+
+    ui->tableWidget_2->setMaximumWidth(350);
+    ui->tableWidget_2->setShowGrid(true);
 
     connection = new mongo::DBClientConnection();
     mongo::client::initialize();
@@ -60,7 +64,32 @@ void MainWindow::on_tableWidget_cellClicked(int row, int column)
 {
     // Если пользователь кликнул по ячейке, то row - номер строки, по которой он кликнул
 
+    if (connect())
+    {
+        QTableWidgetItem* pass = ui->tableWidget->item(row, 0);
+        QString str = pass->text();
+        mongo::Query query = MONGO_QUERY("passport" << str.toInt());
+        std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query);
 
+        str.clear();
+
+        ui->tableWidget_2->removeColumn(0);
+        ui->tableWidget_2->insertColumn(0);
+
+        mongo::BSONObj obj = cursor->next();
+
+        ui->tableWidget_2->setItem(0, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("name"))));
+        ui->tableWidget_2->setItem(1, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("surname"))));
+        ui->tableWidget_2->setItem(2, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("gender"))));
+        ui->tableWidget_2->setItem(3, 0, new QTableWidgetItem(QString::number(obj.getIntField("passport"), 10)));
+        ui->tableWidget_2->setItem(4, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("squadron"))));
+        ui->tableWidget_2->setItem(5, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("rank"))));
+        ui->tableWidget_2->setItem(6, 0, new QTableWidgetItem(QString::number(obj.getIntField("salary"), 10)));
+
+        ui->tableWidget_2->horizontalHeader()->setHidden(true);
+
+
+    }
 }
 
 
@@ -68,6 +97,11 @@ void MainWindow::on_commandLinkButton_clicked()
 {
     if (connect())
     {
+        int n = ui->tableWidget->rowCount();
+        for( int i = 0; i < n; i++ )
+                 ui->tableWidget->removeRow(0);
+
+
         std::string sqdr;
         switch (ui->comboBox->currentIndex())
         {
@@ -92,12 +126,11 @@ void MainWindow::on_commandLinkButton_clicked()
         {
                 mongo::BSONObj obj = cursor->next();
                 ui->tableWidget->insertRow(0);
-                ui->tableWidget->setItem(0, 0, new QTableWidgetItem(obj.getStringField("_id")));
-                ui->tableWidget->setItem(0, 1, new QTableWidgetItem(obj.getStringField("squadron")));
-                ui->tableWidget->setItem(0, 2, new QTableWidgetItem(obj.getStringField("name")));
-                ui->tableWidget->setItem(0, 3, new QTableWidgetItem(obj.getStringField("surname")));
-                ui->tableWidget->setItem(0, 4, new QTableWidgetItem(obj.getStringField("salary")));
-
+                ui->tableWidget->setItem(0, 0, new QTableWidgetItem(QString::number(obj.getIntField("passport"), 10)));
+                ui->tableWidget->setItem(0, 1, new QTableWidgetItem(QString::fromStdString(obj.getStringField("squadron"))));
+                ui->tableWidget->setItem(0, 2, new QTableWidgetItem(QString::fromStdString(obj.getStringField("name"))));
+                ui->tableWidget->setItem(0, 3, new QTableWidgetItem(QString::fromStdString(obj.getStringField("surname"))));
+                ui->tableWidget->setItem(0, 4, new QTableWidgetItem(QString::number(obj.getIntField("salary"), 10)));
         }
 
     }
@@ -125,7 +158,7 @@ bool MainWindow::connect()
     {
         try {
             connection1 = new mongo::DBClientConnection();
-            connection1->connect("localhost:10007");
+            connection1->connect("localhost:27017");
             outputText += "connected ok";
             ui->stats->setText(outputText);
         } catch ( const mongo::DBException &e ) {
@@ -168,6 +201,5 @@ bool MainWindow::connect()
         connection = connection2;
     }
 
-    outputText += "\n\n";
     return true;
 }
