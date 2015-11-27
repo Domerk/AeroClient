@@ -68,8 +68,37 @@ void MainWindow::on_commandLinkButton_clicked()
 {
     if (connect())
     {
-        mongo::Query query = MONGO_QUERY("squadron" << 111);
+        std::string sqdr;
+        switch (ui->comboBox->currentIndex())
+        {
+        case 0:
+            sqdr = "4242";
+            break;
+        case 1:
+            sqdr = "4241";
+            break;
+        case 2:
+            sqdr = "SUAI";
+            break;
+        case 3:
+            sqdr = "kaf44";
+            break;
+        }
+
+        mongo::Query query = MONGO_QUERY("squadron" << sqdr);
         std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query);
+
+        while (cursor->more())
+        {
+                mongo::BSONObj obj = cursor->next();
+                ui->tableWidget->insertRow(0);
+                ui->tableWidget->setItem(0, 0, new QTableWidgetItem(obj.getStringField("_id")));
+                ui->tableWidget->setItem(0, 1, new QTableWidgetItem(obj.getStringField("squadron")));
+                ui->tableWidget->setItem(0, 2, new QTableWidgetItem(obj.getStringField("name")));
+                ui->tableWidget->setItem(0, 3, new QTableWidgetItem(obj.getStringField("surname")));
+                ui->tableWidget->setItem(0, 4, new QTableWidgetItem(obj.getStringField("salary")));
+
+        }
 
     }
 }

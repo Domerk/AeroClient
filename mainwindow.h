@@ -7,6 +7,7 @@
 #include <mongo/client/dbclient.h>
 #include <mongo/bson/bson.h>
 #include <mongo/client/dbclientcursor.h>
+#include <mongo/client/dbclientinterface.h>
 
 namespace Ui {
 class MainWindow;
