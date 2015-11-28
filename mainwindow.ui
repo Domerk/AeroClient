@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>419</width>
-    <height>435</height>
+    <height>379</height>
    </rect>
   </property>
   <property name="palette">
@@ -462,13 +462,6 @@
        </layout>
       </item>
      </layout>
-    </item>
-    <item>
-     <widget class="QLabel" name="label_6">
-      <property name="text">
-       <string>TextLabel</string>
-      </property>
-     </widget>
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_3">

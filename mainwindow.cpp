@@ -8,6 +8,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle(tr("База данных аэродрома"));
 
+    // Информационное окно с сообщением об ошибке
     msb = new QMessageBox();
     msb->setWindowTitle(tr("Сообщение об ошибке"));
     msb->setText(tr("Отсутсвует соединение с сервером!"));
@@ -16,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent) :
     qstrl.append("Mongos");
     qstrl.append("ReplSet 1");
     qstrl.append("ReplSet 2");
-    ui->comboBox_2->addItems(qstrl);
+    ui->comboBox_2->addItems(qstrl); // Добавляем варианты
 
     qstrl.clear();
     qstrl.append("4242");
@@ -50,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tableWidget->setMinimumWidth(660);
 
     // Для второй таблицы - размеры и включение сетки
-    ui->tableWidget_2->setMinimumWidth(250);
+    ui->tableWidget_2->setMinimumWidth(220);
     ui->tableWidget_2->setMaximumWidth(300);
     ui->tableWidget_2->setShowGrid(true);
 
@@ -77,18 +78,23 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_radioButton_clicked()
 {
+    // Чистим таблицу - удаляем строки
     int n = ui->tableWidget->rowCount();
     for( int i = 0; i < n; i++ )
              ui->tableWidget->removeRow(0);
 
-    ui->label_5->hide();
+    // Чистим вторую таблицу, удаляя столбец
+    ui->tableWidget_2->removeColumn(0);
+
+    ui->label_5->hide(); // Прячем элементы
     ui->lineEdit->hide();
 
-    ui->label->show();
+    ui->label->show(); // Показываем элементы
     ui->comboBox->show();
 
-    squadron = true;
+    squadron = true; // Поднимаем флаг
 
+    // Изменяем таблицу
     ui->tableWidget->setColumnHidden(1, false);
     ui->tableWidget->setColumnHidden(4, false);
     ui->tableWidget->setColumnHidden(5, true);
@@ -102,6 +108,8 @@ void MainWindow::on_radioButton_2_clicked()
     int n = ui->tableWidget->rowCount();
     for( int i = 0; i < n; i++ )
              ui->tableWidget->removeRow(0);
+
+    ui->tableWidget_2->removeColumn(0);
 
     ui->label_5->show();
     ui->lineEdit->show();
@@ -122,21 +130,21 @@ void MainWindow::on_radioButton_2_clicked()
 void MainWindow::on_tableWidget_cellClicked(int row, int column)
 {
     // Если пользователь кликнул по ячейке, то row - номер строки, по которой он кликнул
-
-    if (connect())
+    if (connect()) // Если есть соединение
     {
-        QTableWidgetItem* pass = ui->tableWidget->item(row, 0);
-        QString str = pass->text();
-        mongo::Query query = MONGO_QUERY("passport" << str.toInt());
-        std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query);
+        QTableWidgetItem* pass = ui->tableWidget->item(row, 0); // Получаем 0ю ячейку из выбранной строки
+        QString str = pass->text(); // Считываем текст из ячейки - это номер паспорта
+        mongo::Query query = MONGO_QUERY("passport" << str.toInt()); // Формируем запрос
+        std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query); // Отправляем запрос
 
-        str.clear();
+        str.clear(); // Очищаем строку
 
         ui->tableWidget_2->removeColumn(0);
         ui->tableWidget_2->insertColumn(0);
 
-        mongo::BSONObj obj = cursor->next();
+        mongo::BSONObj obj = cursor->next(); // Считываем информацию через курсор
 
+        // Добавляем данные в таблицу
         ui->tableWidget_2->setItem(0, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("name"))));
         ui->tableWidget_2->setItem(1, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("surname"))));
         ui->tableWidget_2->setItem(2, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("gender"))));
@@ -147,9 +155,9 @@ void MainWindow::on_tableWidget_cellClicked(int row, int column)
 
         ui->tableWidget_2->horizontalHeader()->setHidden(true);  // Скрываем автоматически добавляемый заголовок
     }
-    else
+    else // Если соединения нет
     {
-        msb->show();
+        msb->show(); // Показываем сообщение об ошибке
     }
 }
 
@@ -183,13 +191,14 @@ void MainWindow::on_commandLinkButton_clicked()
                     break;
                 }
 
-                mongo::Query query = MONGO_QUERY("squadron" << sqdr);
-                std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query);
+                mongo::Query query = MONGO_QUERY("squadron" << sqdr); // Формируем запрос
+                std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query); // Отправляем запрос
 
-                while (cursor->more())
+                while (cursor->more()) // Считываем информацию из курсора
                 {
-                        mongo::BSONObj obj = cursor->next();
-                        ui->tableWidget->insertRow(0);
+                        mongo::BSONObj obj = cursor->next(); // Получаем объект
+                        ui->tableWidget->insertRow(0); // Добавляем строку
+                        // Заносим в строку информацию
                         ui->tableWidget->setItem(0, 0, new QTableWidgetItem(QString::number(obj.getIntField("passport"), 10)));
                         ui->tableWidget->setItem(0, 1, new QTableWidgetItem(QString::fromStdString(obj.getStringField("squadron"))));
                         ui->tableWidget->setItem(0, 2, new QTableWidgetItem(QString::fromStdString(obj.getStringField("name"))));
@@ -200,11 +209,8 @@ void MainWindow::on_commandLinkButton_clicked()
         else // Иначе поиск по модели самолёта
         {
                 std::string model =ui->lineEdit->text().toStdString(); //  Получаем название модели и превращаем его в стандартную строку
-
-                std::auto_ptr<mongo::DBClientCursor> cursor;
-
-                mongo::BSONObj res;
-
+                mongo::BSONObj res; // Объект - результат
+                // Формируем запрос
                 mongo::BSONArray pipeline = BSON_ARRAY(
                             BSON("$unwind" << "$skill"
                                 ) <<
@@ -222,39 +228,35 @@ void MainWindow::on_commandLinkButton_clicked()
                                 )
 
                             );
+                // Отправляем запрос
+                connection->runCommand("aero", BSON("aggregate" << "pilots" << "pipeline" << pipeline), res);
 
-                connection->runCommand("aero",
-                                       BSON("aggregate" << "pilots" << "pipeline" << pipeline
-                                           ),
-                                       res);
-
+                // Преобразуем полученный результат в строку
                 QString result = QString::fromStdString(res.toString());
+                // Убираем из строки всё лишнее
                 result = result.replace("\"", " ");
                 result = result.replace("\[", " ");
-                //result = result.replace("\]", " ");
-                result = result.replace(QRegExp("[:,']"), " ");
+                result = result.replace("]", " ");
+                result = result.replace(QRegExp("[:,'(){}]"), " ");
                 result = result.replace(QRegExp("(result | _id | ObjectId | name | surname | skill | model | time | passport)"), " ");
                 result = result.simplified();
-
-                ui->label_6->setText(result);
 
                 // разделим исходную строку на подстроки
                 // получаем список строк, каждая из которых - слово
                 // параметр QString::SkipEmptyParts запрещает создание пустых строк
                 QStringList qsl = result.split(QRegularExpression("\\s"), QString::SkipEmptyParts);
                 n = qsl.size();
-                for (int i = 1; i<n; i+=5)
+                // Выводим результат, добавляя строки в таблицу
+                for (int i = 0; i<(n-12); i+=6)
                 {
                         ui->tableWidget->insertRow(0);
-                        ui->tableWidget->setItem(0, 0, new QTableWidgetItem());
-                        ui->tableWidget->setItem(0, 2, new QTableWidgetItem(qsl[i+1])); // Имя
-                        ui->tableWidget->setItem(0, 3, new QTableWidgetItem(qsl[i])); // Фамилия
-                        ui->tableWidget->setItem(0, 5, new QTableWidgetItem()); // Модель
-                        ui->tableWidget->setItem(0, 6, new QTableWidgetItem()); // Налёт
+                        ui->tableWidget->setItem(0, 0, new QTableWidgetItem(qsl[i+3]));
+                        ui->tableWidget->setItem(0, 2, new QTableWidgetItem(qsl[i+2])); // Имя
+                        ui->tableWidget->setItem(0, 3, new QTableWidgetItem(qsl[i+1])); // Фамилия
+                        ui->tableWidget->setItem(0, 5, new QTableWidgetItem(qsl[i+4])); // Модель
+                        ui->tableWidget->setItem(0, 6, new QTableWidgetItem(qsl[i+5])); // Налёт
                 }
-
         }
-
     }
     else
     {
@@ -266,10 +268,10 @@ void MainWindow::on_commandLinkButton_clicked()
 
 bool MainWindow::connect()
 {
-    if (connection != 0)
+    if (connection != 0) // Если соединение есть, удаляем его
         delete connection;
 
-    QString outputText;
+    QString outputText; // Строка состояния
 
     std::vector<mongo::HostAndPort> rs0, rs1;
     rs0.push_back(mongo::HostAndPort("localhost", 10001));
@@ -278,22 +280,21 @@ bool MainWindow::connect()
     rs1.push_back(mongo::HostAndPort("localhost", 10004));
     rs1.push_back(mongo::HostAndPort("localhost", 10005));
 
+    mongo::DBClientReplicaSet *connection2; // Соединение с набором реплик
+    mongo::DBClientConnection *connection1; // Соединение с mongos
 
-    mongo::DBClientReplicaSet *connection2;
-    mongo::DBClientConnection *connection1;
-
-    if (ui->comboBox_2->currentText() == "Mongos")
+    if (ui->comboBox_2->currentText() == "Mongos") // Если выбрано соединение с mongos
     {
         try {
-            connection1 = new mongo::DBClientConnection();
-            connection1->connect("localhost:27017");
-            outputText += "connected ok";
-            ui->stats->setText(outputText);
+            connection1 = new mongo::DBClientConnection(); // Создаём соединение
+            connection1->connect("localhost:27017"); // Пытаемся утсановить его с портом 27017
+            outputText += "connected ok"; // Всё хорошо
+            ui->stats->setText(outputText); // Выводим сообщение
         } catch ( const mongo::DBException &e ) {
-            outputText += "caught ";
-            outputText += e.what();
+            outputText += "caught "; // Если возникает ошибка
+            outputText += e.what(); // Выводим текст ошибки
             ui->stats->setText(outputText);
-            return false;
+            return false; // Возвращаем false
         }
 
         connection = connection1;
