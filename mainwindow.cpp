@@ -77,6 +77,10 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_radioButton_clicked()
 {
+    int n = ui->tableWidget->rowCount();
+    for( int i = 0; i < n; i++ )
+             ui->tableWidget->removeRow(0);
+
     ui->label_5->hide();
     ui->lineEdit->hide();
 
@@ -95,6 +99,10 @@ void MainWindow::on_radioButton_clicked()
 
 void MainWindow::on_radioButton_2_clicked()
 {
+    int n = ui->tableWidget->rowCount();
+    for( int i = 0; i < n; i++ )
+             ui->tableWidget->removeRow(0);
+
     ui->label_5->show();
     ui->lineEdit->show();
 
@@ -221,7 +229,29 @@ void MainWindow::on_commandLinkButton_clicked()
                                        res);
 
                 QString result = QString::fromStdString(res.toString());
+                result = result.replace("\"", " ");
+                result = result.replace("\[", " ");
+                //result = result.replace("\]", " ");
+                result = result.replace(QRegExp("[:,']"), " ");
+                result = result.replace(QRegExp("(result | _id | ObjectId | name | surname | skill | model | time | passport)"), " ");
+                result = result.simplified();
+
                 ui->label_6->setText(result);
+
+                // разделим исходную строку на подстроки
+                // получаем список строк, каждая из которых - слово
+                // параметр QString::SkipEmptyParts запрещает создание пустых строк
+                QStringList qsl = result.split(QRegularExpression("\\s"), QString::SkipEmptyParts);
+                n = qsl.size();
+                for (int i = 1; i<n; i+=5)
+                {
+                        ui->tableWidget->insertRow(0);
+                        ui->tableWidget->setItem(0, 0, new QTableWidgetItem());
+                        ui->tableWidget->setItem(0, 2, new QTableWidgetItem(qsl[i+1])); // Имя
+                        ui->tableWidget->setItem(0, 3, new QTableWidgetItem(qsl[i])); // Фамилия
+                        ui->tableWidget->setItem(0, 5, new QTableWidgetItem()); // Модель
+                        ui->tableWidget->setItem(0, 6, new QTableWidgetItem()); // Налёт
+                }
 
         }
 
