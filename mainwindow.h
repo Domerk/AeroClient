@@ -23,19 +23,17 @@ public:
 
 private slots:
     void on_tableWidget_cellClicked(int row, int column);
-
-
     void on_commandLinkButton_clicked();
+    void on_radioButton_2_clicked();
+    void on_radioButton_clicked();
 
 private:
     Ui::MainWindow *ui;
-    QLabel* lbl;
     QMessageBox* msb;
     mongo::DBClientBase* connection;
 
-    mongo::BSONObj* pilot;
-
     bool connect();
+    bool squadron;
 };
 
 #endif // MAINWINDOW_H

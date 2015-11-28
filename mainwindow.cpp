@@ -8,10 +8,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle(tr("База данных аэродрома"));
 
-    lbl = new QLabel();
     msb = new QMessageBox();
-
-    pilot = new mongo::BSONObj();
+    msb->setWindowTitle(tr("Сообщение об ошибке"));
+    msb->setText(tr("Отсутсвует соединение с сервером!"));
 
     QStringList qstrl;
     qstrl.append("Mongos");
@@ -26,39 +25,91 @@ MainWindow::MainWindow(QWidget *parent) :
     qstrl.append("kaf44");
     ui->comboBox->addItems(qstrl);
 
+    // Скрываем поля: столбец 0 (Паспорт) является служебным
+    // Столбцы Модель и Налёт (5 и 6) используются в режиме поиска по модели
     ui->tableWidget->setColumnHidden(0, true);
+    ui->tableWidget->setColumnHidden(5, true);
+    ui->tableWidget->setColumnHidden(6, true);
+
+    // Задаём ширину столбцов
     ui->tableWidget->setColumnWidth(1,100);
     ui->tableWidget->setColumnWidth(2,200);
     ui->tableWidget->setColumnWidth(3,200);
     ui->tableWidget->setColumnWidth(4,120);
+    ui->tableWidget->setColumnWidth(5,120);
+    ui->tableWidget->setColumnWidth(6,120);
 
+    // Показываем сетку
     ui->tableWidget->setShowGrid(true);
 
+    // Настройки выделения: выделять можно только строки целеком
     ui->tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
 
+    // Минимальная ширина
     ui->tableWidget->setMinimumWidth(660);
 
-    ui->tableWidget_2->setMaximumWidth(350);
+    // Для второй таблицы - размеры и включение сетки
+    ui->tableWidget_2->setMinimumWidth(250);
+    ui->tableWidget_2->setMaximumWidth(300);
     ui->tableWidget_2->setShowGrid(true);
 
-    connection = new mongo::DBClientConnection();
+    // По умолчанию используем поиск по номеру эскадрильи
+    ui->radioButton->setChecked(true);
+    ui->label_5->hide();
+    ui->lineEdit->hide();
+    squadron = true;
+
+    connection = new mongo::DBClientConnection(); // Создаём соединение
     mongo::client::initialize();
-
-
 }
+
+// =================================
 
 MainWindow::~MainWindow()
 {
-    delete lbl;
     delete msb;
-    delete pilot;
     delete connection;
     delete ui;
 }
 
+// =================================
 
+void MainWindow::on_radioButton_clicked()
+{
+    ui->label_5->hide();
+    ui->lineEdit->hide();
 
+    ui->label->show();
+    ui->comboBox->show();
+
+    squadron = true;
+
+    ui->tableWidget->setColumnHidden(1, false);
+    ui->tableWidget->setColumnHidden(4, false);
+    ui->tableWidget->setColumnHidden(5, true);
+    ui->tableWidget->setColumnHidden(6, true);
+}
+
+// =================================
+
+void MainWindow::on_radioButton_2_clicked()
+{
+    ui->label_5->show();
+    ui->lineEdit->show();
+
+    ui->label->hide();
+    ui->comboBox->hide();
+
+     squadron = false;
+
+     ui->tableWidget->setColumnHidden(1, true);
+     ui->tableWidget->setColumnHidden(4, true);
+     ui->tableWidget->setColumnHidden(5, false);
+     ui->tableWidget->setColumnHidden(6, false);
+}
+
+// =================================
 
 void MainWindow::on_tableWidget_cellClicked(int row, int column)
 {
@@ -86,12 +137,15 @@ void MainWindow::on_tableWidget_cellClicked(int row, int column)
         ui->tableWidget_2->setItem(5, 0, new QTableWidgetItem(QString::fromStdString(obj.getStringField("rank"))));
         ui->tableWidget_2->setItem(6, 0, new QTableWidgetItem(QString::number(obj.getIntField("salary"), 10)));
 
-        ui->tableWidget_2->horizontalHeader()->setHidden(true);
-
-
+        ui->tableWidget_2->horizontalHeader()->setHidden(true);  // Скрываем автоматически добавляемый заголовок
+    }
+    else
+    {
+        msb->show();
     }
 }
 
+// =================================
 
 void MainWindow::on_commandLinkButton_clicked()
 {
@@ -102,39 +156,83 @@ void MainWindow::on_commandLinkButton_clicked()
                  ui->tableWidget->removeRow(0);
 
 
-        std::string sqdr;
-        switch (ui->comboBox->currentIndex())
+        if (squadron) // Поиск по номеру эскадрильи
         {
-        case 0:
-            sqdr = "4242";
-            break;
-        case 1:
-            sqdr = "4241";
-            break;
-        case 2:
-            sqdr = "SUAI";
-            break;
-        case 3:
-            sqdr = "kaf44";
-            break;
+                std::string sqdr;
+                switch (ui->comboBox->currentIndex())
+                {
+                case 0:
+                    sqdr = "4242";
+                    break;
+                case 1:
+                    sqdr = "4241";
+                    break;
+                case 2:
+                    sqdr = "SUAI";
+                    break;
+                case 3:
+                    sqdr = "kaf44";
+                    break;
+                }
+
+                mongo::Query query = MONGO_QUERY("squadron" << sqdr);
+                std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query);
+
+                while (cursor->more())
+                {
+                        mongo::BSONObj obj = cursor->next();
+                        ui->tableWidget->insertRow(0);
+                        ui->tableWidget->setItem(0, 0, new QTableWidgetItem(QString::number(obj.getIntField("passport"), 10)));
+                        ui->tableWidget->setItem(0, 1, new QTableWidgetItem(QString::fromStdString(obj.getStringField("squadron"))));
+                        ui->tableWidget->setItem(0, 2, new QTableWidgetItem(QString::fromStdString(obj.getStringField("name"))));
+                        ui->tableWidget->setItem(0, 3, new QTableWidgetItem(QString::fromStdString(obj.getStringField("surname"))));
+                        ui->tableWidget->setItem(0, 4, new QTableWidgetItem(QString::number(obj.getIntField("salary"), 10)));
+                }
         }
-
-        mongo::Query query = MONGO_QUERY("squadron" << sqdr);
-        std::auto_ptr<mongo::DBClientCursor> cursor = connection->query("aero.pilots", query);
-
-        while (cursor->more())
+        else // Иначе поиск по модели самолёта
         {
-                mongo::BSONObj obj = cursor->next();
-                ui->tableWidget->insertRow(0);
-                ui->tableWidget->setItem(0, 0, new QTableWidgetItem(QString::number(obj.getIntField("passport"), 10)));
-                ui->tableWidget->setItem(0, 1, new QTableWidgetItem(QString::fromStdString(obj.getStringField("squadron"))));
-                ui->tableWidget->setItem(0, 2, new QTableWidgetItem(QString::fromStdString(obj.getStringField("name"))));
-                ui->tableWidget->setItem(0, 3, new QTableWidgetItem(QString::fromStdString(obj.getStringField("surname"))));
-                ui->tableWidget->setItem(0, 4, new QTableWidgetItem(QString::number(obj.getIntField("salary"), 10)));
+                std::string model =ui->lineEdit->text().toStdString(); //  Получаем название модели и превращаем его в стандартную строку
+
+                std::auto_ptr<mongo::DBClientCursor> cursor;
+
+                mongo::BSONObj res;
+
+                mongo::BSONArray pipeline = BSON_ARRAY(
+                            BSON("$unwind" << "$skill"
+                                ) <<
+                            BSON("$match" <<
+                                 BSON("skill.model" << model
+                                     )
+                                ) <<
+                            BSON("$project" <<
+                                BSON("passport" << 1 <<
+                                     "name" << 1 <<
+                                     "surname" << 1 <<
+                                     "skill.model" << 1 <<
+                                     "skill.time" << 1
+                                     )
+                                )
+
+                            );
+
+                connection->runCommand("aero",
+                                       BSON("aggregate" << "pilots" << "pipeline" << pipeline
+                                           ),
+                                       res);
+
+                QString result = QString::fromStdString(res.toString());
+                ui->label_6->setText(result);
+
         }
 
     }
+    else
+    {
+        msb->show();
+    }
 }
+
+// =================================
 
 bool MainWindow::connect()
 {
@@ -203,3 +301,8 @@ bool MainWindow::connect()
 
     return true;
 }
+
+// =================================
+
+
+
